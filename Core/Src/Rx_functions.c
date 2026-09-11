@@ -94,7 +94,7 @@ thermal deserialize_thermal(const uint8_t *buf){
 	thermal pkt;
 	uint8_t i = 0;
 
-	pkt.header =  deserialize_header(&(buf[i++]));
+	pkt.header =  deserialize_header(buf[i++]);
 	pkt.probe1 = buf[i++];
 	pkt.probe2 = buf[i++];
 	pkt.probe3 = buf[i++];
