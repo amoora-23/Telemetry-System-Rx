@@ -25,6 +25,13 @@ kinematics deserialize_kinematics(const uint8_t *buf) {
 
     pkt.header = deserialize_header(buf[i++]);
 
+    // time stamp (uint32_t)
+    pkt.timeStamp = ((uint32_t)buf[i]   << 24) |
+    				((uint32_t)buf[i+1] << 16) |
+					((uint32_t)buf[i+2] << 8 ) |
+					((uint32_t)buf[i+3]      );
+    i += 4;
+
     // wheelSpeed (uint16_t), big-endian: MSB was written first
     pkt.wheelSpeed  = ((uint16_t)buf[i]   << 8) | (uint16_t)buf[i+1];
     i += 2;
