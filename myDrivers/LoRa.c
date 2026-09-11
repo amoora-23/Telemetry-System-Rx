@@ -482,29 +482,42 @@ void LoRa_startReceiving(LoRa* _LoRa){
 			LoRa*    LoRa     --> LoRa object handler
 			uint8_t  data			--> A pointer to the array that you want to write bytes in it
 			uint8_t	 length   --> Determines how many bytes you want to read
+			uint32_t good_count -- > number of correct pkts rec
+			uint32_t bad_count --> number of faulty packets rec
 
 		returns     : The number of bytes received
 \* ----------------------------------------------------------------------------- */
-uint8_t LoRa_receive(LoRa* _LoRa, uint8_t* data, uint8_t length){
-	uint8_t read;
-	uint8_t number_of_bytes;
-	uint8_t min = 0;
+uint8_t LoRa_receive(LoRa* _LoRa, uint8_t* data, uint8_t length, uint32_t* good_count, uint32_t* bad_count){
+    uint8_t read;
+    uint8_t number_of_bytes;
+    uint8_t min = 0;
 
-	for(int i=0; i<length; i++)
-		data[i]=0;
+    for(int i = 0; i < length; i++)
+        data[i] = 0;
 
-	LoRa_gotoMode(_LoRa, STNBY_MODE);
-	read = LoRa_read(_LoRa, RegIrqFlags);
-	if((read & 0x40) != 0){
-		LoRa_write(_LoRa, RegIrqFlags, 0xFF);
-		number_of_bytes = LoRa_read(_LoRa, RegRxNbBytes);
-		read = LoRa_read(_LoRa, RegFiFoRxCurrentAddr);
-		LoRa_write(_LoRa, RegFiFoAddPtr, read);
-		min = length >= number_of_bytes ? number_of_bytes : length;
-		for(int i=0; i<min; i++)
-			data[i] = LoRa_read(_LoRa, RegFiFo);
-	}
-	LoRa_gotoMode(_LoRa, RXCONTIN_MODE);
+    LoRa_gotoMode(_LoRa, STNBY_MODE); // puts module in standby mode so no registers are updated by new packets before handling the current packet
+    read = LoRa_read(_LoRa, RegIrqFlags); //reads the IRQ flag register on module
+
+    if((read & 0x40) != 0){                 // checks RxDone bit to see if a packet has been received
+        if((read & 0x20) != 0){              // checks the PayloadCrcError bit to see if the packet is faulty
+            LoRa_write(_LoRa, RegIrqFlags, 0xFF);   // clear flags in IRQ reg by setting them all to 1
+            LoRa_gotoMode(_LoRa, RXCONTIN_MODE);    // back to listening
+            if(bad_count) (*bad_count)++;	// condition checks that the address is not null
+            return 0;
+        }// this if block checks if the packet is faulty and if so it drops it and increments the faulty counter
+
+        LoRa_write(_LoRa, RegIrqFlags, 0xFF);
+        number_of_bytes = LoRa_read(_LoRa, RegRxNbBytes);
+        read = LoRa_read(_LoRa, RegFiFoRxCurrentAddr);
+        LoRa_write(_LoRa, RegFiFoAddPtr, read);
+        min = length >= number_of_bytes ? number_of_bytes : length;
+        for(int i = 0; i < min; i++)
+            data[i] = LoRa_read(_LoRa, RegFiFo);
+
+        if(good_count) (*good_count)++;
+    }
+
+    LoRa_gotoMode(_LoRa, RXCONTIN_MODE);
     return min;
 }
 

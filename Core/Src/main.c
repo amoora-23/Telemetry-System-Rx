@@ -48,9 +48,15 @@
 /* USER CODE BEGIN PV */
  LoRa myLoRa;
  uint8_t status;
- uint8_t rec_data[15];
+ uint8_t rec_data[20];
+ uint8_t empty[20];
  uint8_t packet_size;
- kinematics rec_packet;
+ uint32_t goodCount;
+ uint32_t badCount;
+ uint32_t rate;
+ header hd;
+ kinematics kin_packet;
+ powertrain pwr_packet;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -117,10 +123,25 @@ LoRa_startReceiving(&myLoRa);
   while (1)
   {
     /* USER CODE END WHILE */
- packet_size = LoRa_receive(&myLoRa, rec_data, 15);
- rec_packet = deserialize_kinematics(rec_data);
+ packet_size = LoRa_receive(&myLoRa, rec_data, 20, &goodCount, &badCount);
 
- HAL_Delay(500);
+ hd = deserialize_header(rec_data[0]);
+
+ if(hd.ID==2){
+		 kin_packet = deserialize_kinematics(rec_data);
+		 pwr_packet = deserialize_powertrain(empty);
+ }
+
+
+ if(hd.ID == 1){
+	 pwr_packet = deserialize_powertrain(rec_data);
+	 kin_packet = deserialize_kinematics(empty);
+ }
+
+	 HAL_Delay(500);//turns out this delay is super important cuz without it the rec func gets called back to back too fast and it doesnt have time to listen
+	 	 	 	 	//it just keeps continuously going into standby mode everytime the function is called
+
+
     /* USER CODE BEGIN 3 */
   }
   /* USER CODE END 3 */
