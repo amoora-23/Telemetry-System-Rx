@@ -6,14 +6,24 @@
  */
 #include "Rx_functions.h"
 
+header deserialize_header(const uint8_t buf){
+	header hdr;
+	hdr.ID = (buf >> 6)& 0x03;
+	hdr.deadmanSwitch = (buf >> 5) & 0x01;
+	hdr.packetNumber = buf & 0x1F;
+	return hdr;
+}
+
 kinematics deserialize_kinematics(const uint8_t *buf) {
     kinematics pkt;
     uint8_t i = 0;
 
     // header: unpack the single byte back into ID (2 bits) and deadmanSwitch (1 bit)
-    uint8_t header_byte = buf[i++];
-    pkt.header.ID            = (header_byte >> 1) & 0x03;
-    pkt.header.deadmanSwitch =  header_byte        & 0x01;
+    //uint8_t header_byte = buf[i++];
+    //pkt.header.ID            = (header_byte >> 1) & 0x03;
+    //pkt.header.deadmanSwitch =  header_byte        & 0x01;
+
+    pkt.header = deserialize_header(buf[i++]);
 
     // wheelSpeed (uint16_t), big-endian: MSB was written first
     pkt.wheelSpeed  = ((uint16_t)buf[i]   << 8) | (uint16_t)buf[i+1];
@@ -48,9 +58,11 @@ powertrain deserialize_powertrain(const uint8_t *buf) {
     uint8_t i = 0;
 
     // header: unpack the single byte back into ID (2 bits) and deadmanSwitch (1 bit)
-    uint8_t header_byte = buf[i++];
-    pkt.header.ID            = (header_byte >> 1) & 0x03;
-    pkt.header.deadmanSwitch =  header_byte        & 0x01;
+//    uint8_t header_byte = buf[i++];
+//    pkt.header.ID            = (header_byte >> 1) & 0x03;
+//    pkt.header.deadmanSwitch =  header_byte        & 0x01;
+    pkt.header = deserialize_header(buf[i++]);
+
 
     // motorCurrent (uint16_t), big-endian
     pkt.motorCurrent = ((uint16_t)buf[i] << 8) | (uint16_t)buf[i+1];
@@ -69,5 +81,22 @@ powertrain deserialize_powertrain(const uint8_t *buf) {
     i += 2;
 
     return pkt;
+}
+
+thermal deserialize_thermal(const uint8_t *buf){
+	thermal pkt;
+	uint8_t i = 0;
+
+	pkt.header =  deserialize_header(&(buf[i++]));
+	pkt.probe1 = buf[i++];
+	pkt.probe2 = buf[i++];
+	pkt.probe3 = buf[i++];
+	pkt.probe4 = buf[i++];
+	pkt.probe5 = buf[i++];
+	pkt.probe6 = buf[i++];
+
+	return pkt;
+
+
 }
 
